@@ -29,6 +29,16 @@
             "mainClass": "com.udacity.eureka.EurekaApplication",
             "projectName": "eureka",
             "args": ""
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-BoogleMapsApplication<boogle-maps>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "mainClass": "com.udacity.boogle.maps.BoogleMapsApplication",
+            "projectName": "boogle-maps",
+            "args": ""
         }
     ]
 }
