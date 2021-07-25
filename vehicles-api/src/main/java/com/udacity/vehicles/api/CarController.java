@@ -4,13 +4,15 @@ package com.udacity.vehicles.api;
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 
-import com.udacity.vehicles.domain.car.Car;
-import com.udacity.vehicles.service.CarService;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.stream.Collectors;
+
 import javax.validation.Valid;
+
+import com.udacity.vehicles.domain.car.Car;
+import com.udacity.vehicles.service.CarService;
 
 import org.springframework.hateoas.Resource;
 import org.springframework.hateoas.Resources;
@@ -30,7 +32,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/cars")
 class CarController {
-
     private final CarService carService;
     private final CarResourceAssembler assembler;
 
@@ -63,7 +64,8 @@ class CarController {
          * TODO: Use the `assembler` on that car and return the resulting output.
          *   Update the first line as part of the above implementing.
          */
-        return assembler.toResource(new Car());
+        Car car = this.carService.findById(id);
+        return this.assembler.toResource(car);
     }
 
     /**
@@ -79,7 +81,9 @@ class CarController {
          * TODO: Use the `assembler` on that saved car and return as part of the response.
          *   Update the first line as part of the above implementing.
          */
-        Resource<Car> resource = assembler.toResource(new Car());
+        
+        this.carService.save(car);
+        Resource<Car> resource = this.assembler.toResource(car);
         return ResponseEntity.created(new URI(resource.getId().expand().getHref())).body(resource);
     }
 

@@ -1,26 +1,42 @@
 package com.udacity.vehicles.service;
 
+import com.udacity.vehicles.client.prices.Price;
 import com.udacity.vehicles.domain.car.Car;
 import com.udacity.vehicles.domain.car.CarRepository;
 import java.util.List;
+import java.util.Optional;
+import java.text.MessageFormat;
+
+import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.ClientResponse;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClient.RequestHeadersUriSpec;
+import org.springframework.web.reactive.function.client.WebClient.ResponseSpec;
+import reactor.core.publisher.Mono;
+
+import lombok.AllArgsConstructor;
 
 /**
  * Implements the car service create, read, update or delete
  * information about vehicles, as well as gather related
  * location and price data when desired.
  */
+//@AllArgsConstructor
+@EnableEurekaClient
 @Service
 public class CarService {
 
     private final CarRepository repository;
+    private final WebClient maps;
+    private final WebClient pricing;
 
-    public CarService(CarRepository repository) {
-        /**
-         * TODO: Add the Maps and Pricing Web Clients you create
-         *   in `VehiclesApiApplication` as arguments and set them here.
-         */
+    public CarService(CarRepository repository, WebClient maps, WebClient pricing) {
         this.repository = repository;
+        this.maps = maps;
+        this.pricing = pricing;
     }
 
     /**
@@ -36,13 +52,15 @@ public class CarService {
      * @param id the ID number of the car to gather information on
      * @return the requested car's information, including location and price
      */
-    public Car findById(Long id) {
+    public Car findById(Long id) throws CarNotFoundException {
         /**
          * TODO: Find the car by ID from the `repository` if it exists.
          *   If it does not exist, throw a CarNotFoundException
          *   Remove the below code as part of your implementation.
          */
-        Car car = new Car();
+        Optional<Car> car = repository.findById(id);
+
+        if (car.isEmpty()) throw new CarNotFoundException(MessageFormat.format("Car {0} not found.", id));
 
         /**
          * TODO: Use the Pricing Web client you create in `VehiclesApiApplication`
@@ -51,8 +69,18 @@ public class CarService {
          * Note: The car class file uses @transient, meaning you will need to call
          *   the pricing service each time to get the price.
          */
+                   
+        ClientResponse responsePrice = this.pricing.get()
+                                            .uri(uriBuilder -> uriBuilder
+                                                .path("/services/price")
+                                                .queryParam("vehicleId", "{vehicleId}")
+                                                .build(id))
+                                            .accept(MediaType.APPLICATION_JSON)
+                                            .exchange()
+                                            .block();
 
-
+        Price price = responsePrice.bodyToMono(Price.class).block();
+        
         /**
          * TODO: Use the Maps Web client you create in `VehiclesApiApplication`
          *   to get the address for the vehicle. You should access the location
@@ -63,7 +91,7 @@ public class CarService {
          */
 
 
-        return car;
+        return car.get();
     }
 
     /**

@@ -1,14 +1,24 @@
 package com.udacity.vehicles;
 
+import java.util.List;
+
+import com.netflix.appinfo.InstanceInfo;
+import com.netflix.discovery.DiscoveryClient;
+import com.netflix.discovery.EurekaClient;
+import com.netflix.discovery.shared.Application;
 import com.udacity.vehicles.domain.manufacturer.Manufacturer;
 import com.udacity.vehicles.domain.manufacturer.ManufacturerRepository;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
 
 /**
@@ -17,8 +27,11 @@ import org.springframework.web.reactive.function.client.WebClient;
  * and launches web clients to communicate with maps and pricing.
  */
 @SpringBootApplication
+@EnableEurekaClient
 @EnableJpaAuditing
 public class VehiclesApiApplication {
+    @Autowired
+    private EurekaClient eurekaClient;
 
     public static void main(String[] args) {
         SpringApplication.run(VehiclesApiApplication.class, args);
@@ -51,8 +64,13 @@ public class VehiclesApiApplication {
      * @return created maps endpoint
      */
     @Bean(name="maps")
-    public WebClient webClientMaps(@Value("${maps.endpoint}") String endpoint) {
-        return WebClient.create(endpoint);
+    public WebClient webClientMaps(@Value("${maps.service}") String service) {
+        Application maps = eurekaClient.getApplication(service);
+        List<InstanceInfo> instances = maps.getInstances();
+        return WebClient.builder()
+                        .baseUrl(instances.get(0).getHomePageUrl())
+                        .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .build();
     }
 
     /**
@@ -61,8 +79,13 @@ public class VehiclesApiApplication {
      * @return created pricing endpoint
      */
     @Bean(name="pricing")
-    public WebClient webClientPricing(@Value("${pricing.endpoint}") String endpoint) {
-        return WebClient.create(endpoint);
+    public WebClient webClientPricing(@Value("${pricing.service}") String service) {
+        Application pricing = eurekaClient.getApplication(service);
+        List<InstanceInfo> instances = pricing.getInstances();
+        return WebClient.builder()
+                        .baseUrl(instances.get(0).getHomePageUrl())
+                        .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .build();
     }
 
 }
