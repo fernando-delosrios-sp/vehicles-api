@@ -1,23 +1,20 @@
 package com.udacity.vehicles.service;
 
-import com.udacity.vehicles.client.prices.Price;
-import com.udacity.vehicles.domain.car.Car;
-import com.udacity.vehicles.domain.car.CarRepository;
+import java.text.MessageFormat;
 import java.util.List;
 import java.util.Optional;
-import java.text.MessageFormat;
+
+import com.udacity.vehicles.client.maps.Address;
+import com.udacity.vehicles.client.prices.Price;
+import com.udacity.vehicles.domain.Location;
+import com.udacity.vehicles.domain.car.Car;
+import com.udacity.vehicles.domain.car.CarRepository;
 
 import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClient.RequestHeadersUriSpec;
-import org.springframework.web.reactive.function.client.WebClient.ResponseSpec;
-import reactor.core.publisher.Mono;
-
-import lombok.AllArgsConstructor;
 
 /**
  * Implements the car service create, read, update or delete
@@ -58,40 +55,41 @@ public class CarService {
          *   If it does not exist, throw a CarNotFoundException
          *   Remove the below code as part of your implementation.
          */
-        Optional<Car> car = repository.findById(id);
+        Optional<Car> responseCar = repository.findById(id);
 
-        if (car.isEmpty()) throw new CarNotFoundException(MessageFormat.format("Car {0} not found.", id));
+        if (responseCar.isEmpty()) throw new CarNotFoundException(MessageFormat.format("Car {0} not found.", id));
 
-        /**
-         * TODO: Use the Pricing Web client you create in `VehiclesApiApplication`
-         *   to get the price based on the `id` input'
-         * TODO: Set the price of the car
-         * Note: The car class file uses @transient, meaning you will need to call
-         *   the pricing service each time to get the price.
-         */
-                   
+        Car car = responseCar.get();
         ClientResponse responsePrice = this.pricing.get()
-                                            .uri(uriBuilder -> uriBuilder
-                                                .path("/services/price")
-                                                .queryParam("vehicleId", "{vehicleId}")
-                                                .build(id))
-                                            .accept(MediaType.APPLICATION_JSON)
-                                            .exchange()
-                                            .block();
+                                                    .uri(uriBuilder -> uriBuilder
+                                                        .path("/services/price")
+                                                        .queryParam("vehicleId", "{vehicleId}")
+                                                        .build(id))
+                                                    .accept(MediaType.APPLICATION_JSON)
+                                                    .exchange()
+                                                    .block();
 
         Price price = responsePrice.bodyToMono(Price.class).block();
-        
-        /**
-         * TODO: Use the Maps Web client you create in `VehiclesApiApplication`
-         *   to get the address for the vehicle. You should access the location
-         *   from the car object and feed it to the Maps service.
-         * TODO: Set the location of the vehicle, including the address information
-         * Note: The Location class file also uses @transient for the address,
-         * meaning the Maps service needs to be called each time for the address.
-         */
+        car.setPrice(price.toString());
 
+        Location location = car.getLocation();
+        ClientResponse responseMap = this.maps.get()
+                                                .uri(uriBuilder -> uriBuilder
+                                                    .path("/maps")
+                                                    .queryParam("lat", "{lat}")
+                                                    .queryParam("lon", "{lon}")
+                                                    .build(location.getLat(), location.getLon()))
+                                                .accept(MediaType.APPLICATION_JSON)
+                                                .exchange()
+                                                .block();
 
-        return car.get();
+        Address address = responseMap.bodyToMono(Address.class).block();
+        location.setAddress(address.getAddress());
+        location.setCity(address.getCity());
+        location.setState(address.getState());
+        location.setZip(address.getZip());
+
+        return car;
     }
 
     /**
@@ -121,12 +119,6 @@ public class CarService {
          * TODO: Find the car by ID from the `repository` if it exists.
          *   If it does not exist, throw a CarNotFoundException
          */
-
-
-        /**
-         * TODO: Delete the car from the repository.
-         */
-
-
+        repository.deleteById(id);
     }
 }

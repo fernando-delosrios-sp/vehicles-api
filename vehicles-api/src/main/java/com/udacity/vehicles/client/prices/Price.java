@@ -14,6 +14,11 @@ public class Price {
     public Price() {
     }
 
+    @Override
+    public String toString() {
+        return price.toString() + " " + currency;
+    }
+
     public String getCurrency() {
         return currency;
     }
