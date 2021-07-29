@@ -3,4 +3,5 @@ apache-activemq-5.15.9-bin.tar.gz
 .DS_Store
 
 ### VS code ###
-.vscode
+.vscode/
+target/
