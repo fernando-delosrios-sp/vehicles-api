@@ -50,11 +50,6 @@ public class CarService {
      * @return the requested car's information, including location and price
      */
     public Car findById(Long id) throws CarNotFoundException {
-        /**
-         * TODO: Find the car by ID from the `repository` if it exists.
-         *   If it does not exist, throw a CarNotFoundException
-         *   Remove the below code as part of your implementation.
-         */
         Optional<Car> responseCar = repository.findById(id);
 
         if (responseCar.isEmpty()) throw new CarNotFoundException(MessageFormat.format("Car {0} not found.", id));
@@ -114,11 +109,10 @@ public class CarService {
      * Deletes a given car by ID
      * @param id the ID number of the car to delete
      */
-    public void delete(Long id) {
-        /**
-         * TODO: Find the car by ID from the `repository` if it exists.
-         *   If it does not exist, throw a CarNotFoundException
-         */
+    public void delete(Long id) throws CarNotFoundException {
+        Optional<Car> responseCar = repository.findById(id);
+        if (responseCar.isEmpty()) throw new CarNotFoundException(MessageFormat.format("Car {0} not found.", id));
+
         repository.deleteById(id);
     }
 }

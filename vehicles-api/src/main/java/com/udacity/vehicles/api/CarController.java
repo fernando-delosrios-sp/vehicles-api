@@ -45,11 +45,10 @@ class CarController {
      * @return list of vehicles
      */
     @GetMapping
-    Resources<Resource<Car>> list() {
+    ResponseEntity<?> list() {
         List<Resource<Car>> resources = carService.list().stream().map(assembler::toResource)
                 .collect(Collectors.toList());
-        return new Resources<>(resources,
-                linkTo(methodOn(CarController.class).list()).withSelfRel());
+        return ResponseEntity.accepted().body(resources);
     }
 
     /**
@@ -58,9 +57,10 @@ class CarController {
      * @return all information for the requested vehicle
      */
     @GetMapping("/{id}")
-    Resource<Car> get(@PathVariable Long id) {
+    ResponseEntity<?> get(@PathVariable Long id) {
         Car car = this.carService.findById(id);
-        return this.assembler.toResource(car);
+        Resource<Car> resource = this.assembler.toResource(car);
+        return ResponseEntity.accepted().body(resource);
     }
 
     /**
