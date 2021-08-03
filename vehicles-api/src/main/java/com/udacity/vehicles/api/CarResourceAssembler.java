@@ -16,8 +16,8 @@ public class CarResourceAssembler implements ResourceAssembler<Car, Resource<Car
     @Override
     public Resource<Car> toResource(Car car) {
         return new Resource<>(car,
-                linkTo(methodOn(CarController.class).get(car.getId())).withSelfRel(),
-                linkTo(methodOn(CarController.class).list()).withRel("cars"));
+                linkTo(methodOn(CarController.class).findCar(car.getId())).withSelfRel(),
+                linkTo(methodOn(CarController.class).listCars()).withRel("cars"));
 
     }
 }

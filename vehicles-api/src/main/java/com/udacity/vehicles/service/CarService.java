@@ -5,11 +5,14 @@ import java.util.List;
 import java.util.Optional;
 
 import com.udacity.vehicles.client.maps.Address;
+import com.udacity.vehicles.client.maps.MapsClient;
 import com.udacity.vehicles.client.prices.Price;
+import com.udacity.vehicles.client.prices.PriceClient;
 import com.udacity.vehicles.domain.Location;
 import com.udacity.vehicles.domain.car.Car;
 import com.udacity.vehicles.domain.car.CarRepository;
 
+import org.modelmapper.ModelMapper;
 import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -27,13 +30,13 @@ import org.springframework.web.reactive.function.client.WebClient;
 public class CarService {
 
     private final CarRepository repository;
-    private final WebClient maps;
-    private final WebClient pricing;
+    private final MapsClient maps;
+    private final PriceClient pricing;
 
-    public CarService(CarRepository repository, WebClient maps, WebClient pricing) {
+    public CarService(CarRepository repository, ModelMapper mapper, WebClient maps, WebClient pricing) {
         this.repository = repository;
-        this.maps = maps;
-        this.pricing = pricing;
+        this.maps = new MapsClient(maps, mapper);
+        this.pricing = new PriceClient(pricing);
     }
 
     /**
@@ -41,7 +44,13 @@ public class CarService {
      * @return a list of all vehicles in the CarRepository
      */
     public List<Car> list() {
-        return repository.findAll();
+        List<Car> cars = repository.findAll();
+        cars.forEach(car -> {
+                            setLocation(car);
+                            setPrice(car);
+                            }
+                    );
+        return cars;
     }
 
     /**
@@ -55,34 +64,8 @@ public class CarService {
         if (responseCar.isEmpty()) throw new CarNotFoundException(MessageFormat.format("Car {0} not found.", id));
 
         Car car = responseCar.get();
-        ClientResponse responsePrice = this.pricing.get()
-                                                    .uri(uriBuilder -> uriBuilder
-                                                        .path("/services/price")
-                                                        .queryParam("vehicleId", "{vehicleId}")
-                                                        .build(id))
-                                                    .accept(MediaType.APPLICATION_JSON)
-                                                    .exchange()
-                                                    .block();
-
-        Price price = responsePrice.bodyToMono(Price.class).block();
-        car.setPrice(price.toString());
-
-        Location location = car.getLocation();
-        ClientResponse responseMap = this.maps.get()
-                                                .uri(uriBuilder -> uriBuilder
-                                                    .path("/maps")
-                                                    .queryParam("lat", "{lat}")
-                                                    .queryParam("lon", "{lon}")
-                                                    .build(location.getLat(), location.getLon()))
-                                                .accept(MediaType.APPLICATION_JSON)
-                                                .exchange()
-                                                .block();
-
-        Address address = responseMap.bodyToMono(Address.class).block();
-        location.setAddress(address.getAddress());
-        location.setCity(address.getCity());
-        location.setState(address.getState());
-        location.setZip(address.getZip());
+        setLocation(car);
+        setPrice(car);
 
         return car;
     }
@@ -93,16 +76,25 @@ public class CarService {
      * @return the new/updated car is stored in the repository
      */
     public Car save(Car car) {
+        Car updatedCar;
+
         if (car.getId() != null) {
-            return repository.findById(car.getId())
+            updatedCar = repository.findById(car.getId())
                     .map(carToBeUpdated -> {
                         carToBeUpdated.setDetails(car.getDetails());
                         carToBeUpdated.setLocation(car.getLocation());
                         return repository.save(carToBeUpdated);
                     }).orElseThrow(CarNotFoundException::new);
+        } else {
+            updatedCar = car;
         }
 
-        return repository.save(car);
+        updatedCar = repository.save(updatedCar);
+
+        setLocation(updatedCar);
+        setPrice(updatedCar);
+
+        return updatedCar;
     }
 
     /**
@@ -115,4 +107,46 @@ public class CarService {
 
         repository.deleteById(id);
     }
+
+    private void setLocation(Car car) {
+        Location location = this.maps.getAddress(car.getLocation());
+        car.setLocation(location);
+
+        // ClientResponse responseMap = this.maps.get()
+        //                                         .uri(uriBuilder -> uriBuilder
+        //                                             .path("/maps")
+        //                                             .queryParam("lat", "{lat}")
+        //                                             .queryParam("lon", "{lon}")
+        //                                             .build(location.getLat(), location.getLon()))
+        //                                         .accept(MediaType.APPLICATION_JSON)
+        //                                         .exchange()
+        //                                         .block();
+
+        // Address address = responseMap.bodyToMono(Address.class).block();
+        // location.setAddress(address.getAddress());
+        // location.setCity(address.getCity());
+        // location.setState(address.getState());
+        // location.setZip(address.getZip());
+
+        // car.setLocation(location);
+    }
+
+    private void setPrice(Car car) {
+        String price = this.pricing.getPrice(car.getId());
+        car.setPrice(price);
+
+        // Long id = car.getId();
+        // ClientResponse responsePrice = this.pricing.get()
+        //                                             .uri(uriBuilder -> uriBuilder
+        //                                                 .path("/services/price")
+        //                                                 .queryParam("vehicleId", "{vehicleId}")
+        //                                                 .build(id))
+        //                                             .accept(MediaType.APPLICATION_JSON)
+        //                                             .exchange()
+        //                                             .block();
+
+        // Price price = responsePrice.bodyToMono(Price.class).block();
+        // car.setPrice(price.toString());
+    }
+
 }

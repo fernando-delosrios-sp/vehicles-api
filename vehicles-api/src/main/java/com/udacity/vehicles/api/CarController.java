@@ -1,9 +1,6 @@
 package com.udacity.vehicles.api;
 
 
-import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
-import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
-
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
@@ -15,7 +12,6 @@ import com.udacity.vehicles.domain.car.Car;
 import com.udacity.vehicles.service.CarService;
 
 import org.springframework.hateoas.Resource;
-import org.springframework.hateoas.Resources;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,7 +41,7 @@ class CarController {
      * @return list of vehicles
      */
     @GetMapping
-    ResponseEntity<?> list() {
+    ResponseEntity<?> listCars() {
         List<Resource<Car>> resources = carService.list().stream().map(assembler::toResource)
                 .collect(Collectors.toList());
         return ResponseEntity.accepted().body(resources);
@@ -57,7 +53,7 @@ class CarController {
      * @return all information for the requested vehicle
      */
     @GetMapping("/{id}")
-    ResponseEntity<?> get(@PathVariable Long id) {
+    ResponseEntity<?> findCar(@PathVariable Long id) {
         Car car = this.carService.findById(id);
         Resource<Car> resource = this.assembler.toResource(car);
         return ResponseEntity.accepted().body(resource);
@@ -70,9 +66,9 @@ class CarController {
      * @throws URISyntaxException if the request contains invalid fields or syntax
      */
     @PostMapping
-    ResponseEntity<?> post(@Valid @RequestBody Car car) throws URISyntaxException {
-        this.carService.save(car);
-        Resource<Car> resource = this.assembler.toResource(car);
+    ResponseEntity<?> createCar(@Valid @RequestBody Car car) throws URISyntaxException {
+        Car savedCar = this.carService.save(car);
+        Resource<Car> resource = this.assembler.toResource(savedCar);
         return ResponseEntity.created(new URI(resource.getId().expand().getHref())).body(resource);
     }
 
@@ -83,11 +79,11 @@ class CarController {
      * @return response that the vehicle was updated in the system
      */
     @PutMapping("/{id}")
-    ResponseEntity<?> put(@PathVariable Long id, @Valid @RequestBody Car car) throws URISyntaxException{
+    ResponseEntity<?> updateCar(@PathVariable Long id, @Valid @RequestBody Car car) throws URISyntaxException{
         car.setId(id);
         this.carService.save(car);
         Resource<Car> resource = assembler.toResource(car);
-        return ResponseEntity.created(new URI(resource.getId().expand().getHref())).body(resource);
+        return ResponseEntity.ok().body(resource);
     }
 
     /**
@@ -96,8 +92,8 @@ class CarController {
      * @return response that the related vehicle is no longer in the system
      */
     @DeleteMapping("/{id}")
-    ResponseEntity<?> delete(@PathVariable Long id) {
+    ResponseEntity<?> deleteCar(@PathVariable Long id) {
         this.carService.delete(id);
-        return ResponseEntity.ok(null);
+        return ResponseEntity.noContent().build();
     }
 }
