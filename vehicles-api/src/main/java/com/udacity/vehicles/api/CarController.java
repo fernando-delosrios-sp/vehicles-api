@@ -22,9 +22,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+
 /**
  * Implements a REST-based controller for the Vehicles API.
  */
+
 @RestController
 @RequestMapping("/cars")
 class CarController {
@@ -40,6 +44,9 @@ class CarController {
      * Creates a list to store any vehicles.
      * @return list of vehicles
      */
+    @ApiResponses( value = {
+        @ApiResponse(code = 200, message = "Car list request OK.")
+    })
     @GetMapping
     ResponseEntity<?> listCars() {
         List<Resource<Car>> resources = carService.list().stream().map(assembler::toResource)
@@ -52,11 +59,15 @@ class CarController {
      * @param id the id number of the given vehicle
      * @return all information for the requested vehicle
      */
+    @ApiResponses( value = {
+        @ApiResponse(code = 400, message = "Car not found."),
+        @ApiResponse(code = 200, message = "Car get request OK.")
+    })
     @GetMapping("/{id}")
     ResponseEntity<?> findCar(@PathVariable Long id) {
         Car car = this.carService.findById(id);
         Resource<Car> resource = this.assembler.toResource(car);
-        return ResponseEntity.accepted().body(resource);
+        return ResponseEntity.ok().body(resource);
     }
 
     /**
@@ -65,6 +76,9 @@ class CarController {
      * @return response that the new vehicle was added to the system
      * @throws URISyntaxException if the request contains invalid fields or syntax
      */
+    @ApiResponses( value = {
+        @ApiResponse(code = 201, message = "Car created successfully.")
+    })
     @PostMapping
     ResponseEntity<?> createCar(@Valid @RequestBody Car car) throws URISyntaxException {
         Car savedCar = this.carService.save(car);
@@ -78,6 +92,10 @@ class CarController {
      * @param car The updated information about the related vehicle.
      * @return response that the vehicle was updated in the system
      */
+    @ApiResponses( value = {
+        @ApiResponse(code = 400, message = "Car not found."),
+        @ApiResponse(code = 200, message = "Car updated successfully.")
+    })
     @PutMapping("/{id}")
     ResponseEntity<?> updateCar(@PathVariable Long id, @Valid @RequestBody Car car) throws URISyntaxException{
         car.setId(id);
